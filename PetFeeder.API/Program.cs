@@ -30,7 +30,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+// Comentado en desarrollo para permitir llamadas HTTP desde el emulador Android (http://10.0.2.2:5172)
+// app.UseHttpsRedirection();
 
 app.UseAuthorization();
 
