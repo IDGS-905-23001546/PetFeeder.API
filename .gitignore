@@ -1,0 +1,27 @@
+# ===== SECRETOS - NUNCA subir (contiene App Password de Gmail y connection string) =====
+appsettings.json
+appsettings.Development.json
+appsettings.Production.json
+
+# ===== Resultados de compilacion =====
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+build/
+bld/
+out/
+
+# ===== Visual Studio =====
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.userprefs
+
+# ===== Varios =====
+*.log
+*.cache
