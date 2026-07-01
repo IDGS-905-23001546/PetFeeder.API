@@ -22,6 +22,9 @@ namespace PetFeeder.API.Models
         [Column("edad_anos")]
         public byte EdadAnos { get; set; }
 
+        [Column("edad_meses")]
+        public short EdadMeses { get; set; }
+
         [Column("peso_kg", TypeName = "decimal(5,2)")]
         public decimal PesoKg { get; set; }
 
