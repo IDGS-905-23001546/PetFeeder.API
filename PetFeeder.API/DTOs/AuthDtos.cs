@@ -24,6 +24,12 @@
         public string Codigo { get; set; } = string.Empty;
     }
 
+    // POST /api/auth/reenviar
+    public class ReenviarOtpDto
+    {
+        public string Email { get; set; } = string.Empty;
+    }
+
     // SALIDAS (lo que la API RESPONDE) 
 
     // Respuesta genérica con mensaje (registro, verificación, errores)

@@ -83,6 +83,64 @@ namespace PetFeeder.API.Controllers
             });
         }
 
+        // POST /api/auth/reenviar
+        [HttpPost("reenviar")]
+        public async Task<IActionResult> Reenviar([FromBody] ReenviarOtpDto dto)
+        {
+            // 1. Buscar el usuario por email
+            var usuario = await _db.Usuarios
+                .FirstOrDefaultAsync(u => u.Email == dto.Email);
+
+            if (usuario == null)
+            {
+                return BadRequest(new RespuestaDto
+                {
+                    Exito = false,
+                    Mensaje = "No existe una cuenta con ese correo."
+                });
+            }
+
+            // 2. Si ya está verificada, no hay nada que reenviar
+            if (usuario.Verificado)
+            {
+                return Ok(new RespuestaDto
+                {
+                    Exito = true,
+                    Mensaje = "Tu cuenta ya está verificada. Inicia sesión."
+                });
+            }
+
+            // 3. Invalidar los códigos anteriores no usados
+            var previos = await _db.OtpVerificaciones
+                .Where(o => o.UsuarioId == usuario.Id && !o.Usado)
+                .ToListAsync();
+            foreach (var p in previos) p.Usado = true;
+
+            // 4. Generar y guardar un código nuevo (expira en 10 min)
+            var codigo = Random.Shared.Next(100000, 1000000).ToString();
+            var otp = new OtpVerificacion
+            {
+                UsuarioId = usuario.Id,
+                Codigo = codigo,
+                Intentos = 0,
+                MaxIntentos = 3,
+                ExpiraEn = DateTime.Now.AddMinutes(10),
+                Usado = false,
+                CreatedAt = DateTime.Now
+            };
+            _db.OtpVerificaciones.Add(otp);
+            await _db.SaveChangesAsync();
+
+            // 5. Enviar el nuevo código por correo
+            await _emailService.EnviarOtpAsync(usuario.Email, usuario.Nombre, codigo);
+
+            return Ok(new RespuestaDto
+            {
+                Exito = true,
+                Mensaje = "Te enviamos un nuevo código a tu correo."
+            });
+        }
+
         // POST /api/auth/verificar
         [HttpPost("verificar")]
         public async Task<IActionResult> Verificar([FromBody] VerificarOtpDto dto)
