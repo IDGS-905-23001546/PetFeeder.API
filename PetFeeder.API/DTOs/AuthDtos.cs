@@ -47,4 +47,11 @@
         public string Email { get; set; } = string.Empty;
         public bool Verificado { get; set; }
     }
+
+    public class CambiarPasswordDto
+    {
+        public int UsuarioId { get; set; }
+        public string PasswordActual { get; set; } = string.Empty;
+        public string PasswordNueva { get; set; } = string.Empty;
+    }
 }

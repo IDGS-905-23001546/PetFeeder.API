@@ -1,24 +1,13 @@
 -- =============================================================================
 -- PetFeeder / PawFeeder - Base de Datos (SQL Server / T-SQL)
--- Convertido desde el esquema MySQL original (database_schema.sql)
--- Motor objetivo: SQL Server 2016+  (usa DROP TABLE IF EXISTS y CREATE OR ALTER VIEW)
+-- Schema completo sin modulo de horarios de agua
+-- Incluye: registros_agua_semanal para guardar ml dispensados por semana
+-- Motor objetivo: SQL Server 2016+ (DROP TABLE IF EXISTS, CREATE OR ALTER VIEW)
 -- =============================================================================
 -- COMO USAR:
 --   1) Abre este script en SSMS (o ejecuta con sqlcmd).
---   2) Ejecutalo completo. Crea la base petfeeder_db, las 9 tablas, 3 vistas y datos seed.
+--   2) Ejecutalo completo. Crea la base petfeeder_db, las tablas, vistas y datos seed.
 --   3) Re-ejecutable: borra y recrea las tablas (DROP IF EXISTS) en cada corrida.
---
--- CAMBIOS vs MySQL:
---   - AUTO_INCREMENT -> IDENTITY(1,1)
---   - TINYINT(1)     -> BIT
---   - VARCHAR        -> NVARCHAR (soporta acentos/ñ); literales unicode con N'...'
---   - ENUM(...)      -> NVARCHAR + CHECK constraint
---   - DATETIME       -> DATETIME2 ; CURRENT_TIMESTAMP -> GETDATE()
---   - Indices (KEY) movidos fuera del CREATE TABLE (CREATE INDEX)
---   - Las FK secundarias (mascota_id, dispensador_id, horario_id) quedan en NO ACTION
---     porque SQL Server no admite multiples rutas de cascada (MySQL si). La FK de
---     usuario_id mantiene ON DELETE CASCADE para limpiar los datos del usuario.
---   - sesiones.token sin indice (NVARCHAR(512) excede el limite de 900 bytes de indice).
 -- =============================================================================
 
 
@@ -32,6 +21,7 @@ GO
 
 
 -- ============ 2) LIMPIAR TABLAS PREVIAS (orden inverso por dependencias) ============
+DROP TABLE IF EXISTS registros_agua_semanal;
 DROP TABLE IF EXISTS notificaciones;
 DROP TABLE IF EXISTS telemetria_dispensador;
 DROP TABLE IF EXISTS dispensaciones;
@@ -105,6 +95,7 @@ CREATE TABLE mascotas (
     nombre          NVARCHAR(100)   NOT NULL,
     raza            NVARCHAR(100)   NOT NULL,
     edad_anos       TINYINT         NOT NULL DEFAULT 0,
+    edad_meses      SMALLINT        NOT NULL DEFAULT 0,    -- Edad en meses para calculo de porciones
     peso_kg         DECIMAL(5,2)    NOT NULL DEFAULT 0.00,
     tamano          NVARCHAR(20)    NOT NULL DEFAULT N'mediano',
     activa          BIT             NOT NULL DEFAULT 0,    -- solo 1 activa por usuario
@@ -170,9 +161,9 @@ CREATE TABLE horarios (
     CONSTRAINT fk_horarios_usuario FOREIGN KEY (usuario_id)
         REFERENCES usuarios (id) ON DELETE CASCADE,
     CONSTRAINT fk_horarios_mascota FOREIGN KEY (mascota_id)
-        REFERENCES mascotas (id),        -- NO ACTION (evita multiples rutas de cascada)
+        REFERENCES mascotas (id),
     CONSTRAINT fk_horarios_dispensador FOREIGN KEY (dispensador_id)
-        REFERENCES dispensadores (id)    -- NO ACTION
+        REFERENCES dispensadores (id)
 );
 CREATE INDEX idx_horarios_usuario ON horarios (usuario_id);
 CREATE INDEX idx_horarios_activo  ON horarios (usuario_id, activo);
@@ -198,11 +189,11 @@ CREATE TABLE dispensaciones (
     CONSTRAINT fk_disp_usuario FOREIGN KEY (usuario_id)
         REFERENCES usuarios (id) ON DELETE CASCADE,
     CONSTRAINT fk_disp_mascota FOREIGN KEY (mascota_id)
-        REFERENCES mascotas (id),        -- NO ACTION
+        REFERENCES mascotas (id),
     CONSTRAINT fk_disp_dispensador FOREIGN KEY (dispensador_id)
-        REFERENCES dispensadores (id),   -- NO ACTION
+        REFERENCES dispensadores (id),
     CONSTRAINT fk_disp_horario FOREIGN KEY (horario_id)
-        REFERENCES horarios (id)         -- NO ACTION
+        REFERENCES horarios (id)
 );
 CREATE INDEX idx_disp_usuario ON dispensaciones (usuario_id);
 CREATE INDEX idx_disp_fecha   ON dispensaciones (usuario_id, fecha_hora);
@@ -243,9 +234,31 @@ CREATE TABLE notificaciones (
     CONSTRAINT fk_notif_usuario FOREIGN KEY (usuario_id)
         REFERENCES usuarios (id) ON DELETE CASCADE,
     CONSTRAINT fk_notif_dispensador FOREIGN KEY (dispensador_id)
-        REFERENCES dispensadores (id)    -- NO ACTION
+        REFERENCES dispensadores (id)
 );
 CREATE INDEX idx_notif_usuario ON notificaciones (usuario_id, leida);
+GO
+
+
+-- ============ TABLA: registros_agua_semanal ============
+-- Guarda cuantos ml de agua dispensa el prototipo por semana.
+-- Cada registro es un evento de agua (el ESP32 dispensa y reporta).
+CREATE TABLE registros_agua_semanal (
+    id              INT             IDENTITY(1,1) NOT NULL,
+    usuario_id      INT             NOT NULL,
+    dispensador_id  INT                 NULL,
+    cantidad_ml     DECIMAL(7,1)    NOT NULL,              -- ml dispensados en este evento
+    semana_anio     TINYINT         NOT NULL,              -- numero de semana (1-53)
+    anio            SMALLINT        NOT NULL,              -- anio del registro
+    fecha_registro  DATETIME2       NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT pk_registros_agua PRIMARY KEY (id),
+    CONSTRAINT fk_regagua_usuario FOREIGN KEY (usuario_id)
+        REFERENCES usuarios (id) ON DELETE CASCADE,
+    CONSTRAINT fk_regagua_dispensador FOREIGN KEY (dispensador_id)
+        REFERENCES dispensadores (id)
+);
+CREATE INDEX idx_regagua_usuario ON registros_agua_semanal (usuario_id);
+CREATE INDEX idx_regagua_semana  ON registros_agua_semanal (usuario_id, anio, semana_anio);
 GO
 
 
@@ -255,14 +268,14 @@ GO
 
 -- Usuario admin de prueba.
 --   email:      carlosriosrmz17@gmail.com
---   contraseña: CarlosRMZ17   (hash BCrypt real; ya queda verificado para hacer login)
+--   contrasena: CarlosRMZ17   (hash BCrypt real; ya queda verificado para hacer login)
 INSERT INTO usuarios (nombre, email, password_hash, verificado, activo) VALUES
 (N'Carlos', N'carlosriosrmz17@gmail.com',
  '$2a$11$xRDdvigbrklRx7Mlfmz5NObDQunI71SBzSwDeBT0Ar0nYocjEZZCe', 1, 1);
 
--- Mascota de prueba (Golden Retriever, grande)
-INSERT INTO mascotas (usuario_id, nombre, raza, edad_anos, peso_kg, tamano, activa) VALUES
-(1, N'Max', N'Golden Retriever', 2, 28.50, N'grande', 1);
+-- Mascota de prueba (Golden Retriever, grande, 2 anos = 24 meses)
+INSERT INTO mascotas (usuario_id, nombre, raza, edad_anos, edad_meses, peso_kg, tamano, activa) VALUES
+(1, N'Max', N'Golden Retriever', 2, 24, 28.50, N'grande', 1);
 
 -- Dispensador de prueba
 INSERT INTO dispensadores (usuario_id, nombre, codigo_unico, firmware_version, estado, bateria_percent, nivel_tolva_pct, ssid_wifi) VALUES
@@ -290,6 +303,7 @@ SELECT
     m.tamano,
     m.peso_kg,
     m.edad_anos,
+    m.edad_meses,
     d.id            AS dispensador_id,
     d.estado        AS dispensador_estado,
     d.bateria_percent,
@@ -322,7 +336,6 @@ GROUP BY usuario_id;
 GO
 
 -- Proxima dispensa programada por usuario
--- NOTA: DATEPART(WEEKDAY,...) asume DATEFIRST=7 (domingo=1), el valor por defecto en SQL Server.
 CREATE OR ALTER VIEW v_proxima_dispensa AS
 SELECT
     h.usuario_id,
@@ -346,3 +359,4 @@ GO
 -- =============================================================================
 -- FIN DEL ESQUEMA
 -- =============================================================================
+select * from usuarios;

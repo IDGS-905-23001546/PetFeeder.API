@@ -73,8 +73,16 @@ namespace PetFeeder.API.Controllers
             _db.OtpVerificaciones.Add(otp);
             await _db.SaveChangesAsync();
 
-            // 5. Enviar el código por correo
-            await _emailService.EnviarOtpAsync(usuario.Email, usuario.Nombre, codigo);
+            // 5. Intentar enviar el código por correo (si falla, no bloquea el registro)
+            try
+            {
+                await _emailService.EnviarOtpAsync(usuario.Email, usuario.Nombre, codigo);
+            }
+            catch (Exception ex)
+            {
+                // Log del error pero no retornar error al usuario
+                Console.WriteLine($"[WARNING] No se pudo enviar el correo OTP: {ex.Message}");
+            }
 
             return Ok(new RespuestaDto
             {
@@ -131,8 +139,15 @@ namespace PetFeeder.API.Controllers
             _db.OtpVerificaciones.Add(otp);
             await _db.SaveChangesAsync();
 
-            // 5. Enviar el nuevo código por correo
-            await _emailService.EnviarOtpAsync(usuario.Email, usuario.Nombre, codigo);
+            // 5. Intentar enviar el nuevo código por correo (si falla, no bloquea)
+            try
+            {
+                await _emailService.EnviarOtpAsync(usuario.Email, usuario.Nombre, codigo);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[WARNING] No se pudo enviar el correo OTP: {ex.Message}");
+            }
 
             return Ok(new RespuestaDto
             {
@@ -265,6 +280,29 @@ namespace PetFeeder.API.Controllers
                 Email = usuario.Email,
                 Verificado = usuario.Verificado
             });
+        }
+
+    // CAMBIAR CONTRASENA --------
+    
+    [HttpPut("cambiar-password")]
+        public async Task<ActionResult<RespuestaDto>> CambiarPassword([FromBody] CambiarPasswordDto dto)
+        {
+            var usuario = await _db.Usuarios.FirstAsync(dto.UsuarioId);
+            if (usuario == null)
+                return BadRequest(new RespuestaDto { Exito = 0, Mensaje = "Usuario no encontrado." });
+
+            if (!_passwordService.Verificar(dto.PasswordActual, usuario.PasswordHash))
+                return BadRequest(new RespuestaDto { Exito = 0, Mensaje = "Contraseña o Usuario incorrectos." });
+
+            if (string.IsNullOrWhiteSpace(dto.PasswordNueva) || dto.PasswordNueva.Length < 6)
+                return BadRequest(new RespuestaDto { Exito = 0, Mensaje = "La nueva contraseña debe de tener minimo 6 caracteres." });
+
+            usuario.PasswordHash = _passwordService.Encriptar(dto.PasswordNueva);
+            usuario.UpdateAt =
+            usuario.UpdateAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+
+            return Ok(new RespuestaDto { Exito = 1, Mensaje = "Contraseña actualizada correctamente." });
         }
     }
 }

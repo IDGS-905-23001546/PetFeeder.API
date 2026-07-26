@@ -20,9 +20,5 @@ namespace PetFeeder.API.Data
         public DbSet<Dispensacion> Dispensaciones { get; set; }
         public DbSet<TelemetriaDispensador> Telemetria { get; set; }
         public DbSet<Notificacion> Notificaciones { get; set; }
-
-        // Tablas nuevas del módulo de agua
-        public DbSet<HorarioAgua> HorariosAgua { get; set; }
-        public DbSet<DispensacionAgua> DispensacionesAgua { get; set; }
     }
 }
