@@ -283,26 +283,25 @@ namespace PetFeeder.API.Controllers
         }
 
     // CAMBIAR CONTRASENA --------
-    
+
     [HttpPut("cambiar-password")]
         public async Task<ActionResult<RespuestaDto>> CambiarPassword([FromBody] CambiarPasswordDto dto)
         {
-            var usuario = await _db.Usuarios.FirstAsync(dto.UsuarioId);
+            var usuario = await _db.Usuarios.FindAsync(dto.UsuarioId);
             if (usuario == null)
-                return BadRequest(new RespuestaDto { Exito = 0, Mensaje = "Usuario no encontrado." });
+                return BadRequest(new RespuestaDto { Exito = false, Mensaje = "Usuario no encontrado." });
 
             if (!_passwordService.Verificar(dto.PasswordActual, usuario.PasswordHash))
-                return BadRequest(new RespuestaDto { Exito = 0, Mensaje = "Contraseña o Usuario incorrectos." });
+                return BadRequest(new RespuestaDto { Exito = false, Mensaje = "Contraseña o Usuario incorrectos." });
 
             if (string.IsNullOrWhiteSpace(dto.PasswordNueva) || dto.PasswordNueva.Length < 6)
-                return BadRequest(new RespuestaDto { Exito = 0, Mensaje = "La nueva contraseña debe de tener minimo 6 caracteres." });
+                return BadRequest(new RespuestaDto { Exito = false, Mensaje = "La nueva contraseña debe de tener minimo 6 caracteres." });
 
             usuario.PasswordHash = _passwordService.Encriptar(dto.PasswordNueva);
-            usuario.UpdateAt =
-            usuario.UpdateAt = DateTime.UtcNow;
+            usuario.UpdatedAt = DateTime.UtcNow;
             await _db.SaveChangesAsync();
 
-            return Ok(new RespuestaDto { Exito = 1, Mensaje = "Contraseña actualizada correctamente." });
+            return Ok(new RespuestaDto { Exito = true, Mensaje = "Contraseña actualizada correctamente." });
         }
     }
 }
