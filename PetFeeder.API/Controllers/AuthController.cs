@@ -30,65 +30,75 @@ namespace PetFeeder.API.Controllers
         [HttpPost("registro")]
         public async Task<IActionResult> Registro([FromBody] RegistroDto dto)
         {
-            // 1. Validar que el correo no esté ya registrado
-            bool existe = await _db.Usuarios.AnyAsync(u => u.Email == dto.Email);
-            if (existe)
-            {
-                return BadRequest(new RespuestaDto
-                {
-                    Exito = false,
-                    Mensaje = "Ya existe una cuenta con ese correo."
-                });
-            }
-
-            // 2. Crear el usuario con la contraseña ENCRIPTADA, sin verificar aún
-            var usuario = new Usuario
-            {
-                Nombre = dto.Nombre,
-                Email = dto.Email,
-                Telefono = dto.Telefono,
-                PasswordHash = _passwordService.Encriptar(dto.Password),
-                Verificado = false,
-                Activo = true,
-                CreatedAt = DateTime.Now,
-                UpdatedAt = DateTime.Now
-            };
-            _db.Usuarios.Add(usuario);
-            await _db.SaveChangesAsync(); // aquí se le asigna el Id
-
-            // 3. Generar un código OTP de 6 dígitos
-            var codigo = Random.Shared.Next(100000, 1000000).ToString();
-
-            // 4. Guardar el OTP en la tabla otp_verificacion (expira en 5 min)
-            var otp = new OtpVerificacion
-            {
-                UsuarioId = usuario.Id,
-                Codigo = codigo,
-                Intentos = 0,
-                MaxIntentos = 3,
-                ExpiraEn = DateTime.Now.AddMinutes(10),
-                Usado = false,
-                CreatedAt = DateTime.Now
-            };
-            _db.OtpVerificaciones.Add(otp);
-            await _db.SaveChangesAsync();
-
-            // 5. Intentar enviar el código por correo (si falla, no bloquea el registro)
             try
             {
-                await _emailService.EnviarOtpAsync(usuario.Email, usuario.Nombre, codigo);
+                // 1. Validar que el correo no esté ya registrado
+                bool existe = await _db.Usuarios.AnyAsync(u => u.Email == dto.Email);
+                if (existe)
+                {
+                    return BadRequest(new RespuestaDto
+                    {
+                        Exito = false,
+                        Mensaje = "Ya existe una cuenta con ese correo."
+                    });
+                }
+
+                // 2. Crear el usuario con la contraseña ENCRIPTADA, sin verificar aún
+                var usuario = new Usuario
+                {
+                    Nombre = dto.Nombre,
+                    Email = dto.Email,
+                    Telefono = dto.Telefono,
+                    PasswordHash = _passwordService.Encriptar(dto.Password),
+                    Verificado = false,
+                    Activo = true,
+                    CreatedAt = DateTime.Now,
+                    UpdatedAt = DateTime.Now
+                };
+                _db.Usuarios.Add(usuario);
+                await _db.SaveChangesAsync(); // aquí se le asigna el Id
+
+                // 3. Generar un código OTP de 6 dígitos
+                var codigo = Random.Shared.Next(100000, 1000000).ToString();
+
+                // 4. Guardar el OTP en la tabla otp_verificacion (expira en 5 min)
+                var otp = new OtpVerificacion
+                {
+                    UsuarioId = usuario.Id,
+                    Codigo = codigo,
+                    Intentos = 0,
+                    MaxIntentos = 3,
+                    ExpiraEn = DateTime.Now.AddMinutes(10),
+                    Usado = false,
+                    CreatedAt = DateTime.Now
+                };
+                _db.OtpVerificaciones.Add(otp);
+                await _db.SaveChangesAsync();
+
+                // 5. Intentar enviar el código por correo (si falla, no bloquea el registro)
+                try
+                {
+                    await _emailService.EnviarOtpAsync(usuario.Email, usuario.Nombre, codigo);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[WARNING] No se pudo enviar el correo OTP: {ex.Message}");
+                }
+
+                return Ok(new RespuestaDto
+                {
+                    Exito = true,
+                    Mensaje = "Cuenta creada. Te enviamos un código de verificación a tu correo."
+                });
             }
             catch (Exception ex)
             {
-                // Log del error pero no retornar error al usuario
-                Console.WriteLine($"[WARNING] No se pudo enviar el correo OTP: {ex.Message}");
+                return StatusCode(500, new RespuestaDto
+                {
+                    Exito = false,
+                    Mensaje = $"Error del servidor: {ex.Message}"
+                });
             }
-
-            return Ok(new RespuestaDto
-            {
-                Exito = true,
-                Mensaje = "Cuenta creada. Te enviamos un código de verificación a tu correo."
-            });
         }
 
         // POST /api/auth/reenviar
