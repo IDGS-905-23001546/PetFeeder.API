@@ -14,9 +14,23 @@ builder.Services.AddSwaggerGen();
 
 // Conexion a BD: Render pone DATABASE_URL como variable de entorno
 // En local usa SQL Server (appsettings.json), en Render usa PostgreSQL
-var connStr = Environment.GetEnvironmentVariable("DATABASE_URL")
+var rawConnStr = Environment.GetEnvironmentVariable("DATABASE_URL")
     ?? builder.Configuration.GetConnectionString("DefaultConnection")
     ?? "";
+
+// Render da el URL como postgresql://user:pass@host:5432/db
+// Npgsql necesita Host=...;Port=... formalo, lo convertimos
+string connStr;
+if (rawConnStr.StartsWith("postgresql://") || rawConnStr.StartsWith("postgres://"))
+{
+    var uri = new Uri(rawConnStr);
+    var userInfo = uri.UserInfo.Split(':');
+    connStr = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=true";
+}
+else
+{
+    connStr = rawConnStr;
+}
 
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
@@ -38,6 +52,20 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.EnsureCreated();
+
+    // Seed: si no hay usuarios, crear el usuario de prueba
+    if (!db.Usuarios.Any())
+    {
+        db.Usuarios.Add(new PetFeeder.API.Models.Usuario
+        {
+            Nombre = "Carlos",
+            Email = "carlosriosrmz17@gmail.com",
+            PasswordHash = "$2a$11$xRDdvigbrklRx7Mlfmz5NObDQunI71SBzSwDeBT0Ar0nYocjEZZCe",
+            Verificado = true,
+            Activo = true
+        });
+        db.SaveChanges();
+    }
 }
 
 // Configure the HTTP request pipeline.
