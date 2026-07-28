@@ -313,5 +313,36 @@ namespace PetFeeder.API.Controllers
 
             return Ok(new RespuestaDto { Exito = true, Mensaje = "Contraseña actualizada correctamente." });
         }
+
+    // BORRAR USUARIO POR EMAIL (temporal para limpiar cuentas de prueba)
+    [HttpDelete("usuario")]
+    public async Task<IActionResult> BorrarUsuario([FromQuery] string email)
+    {
+        var usuario = await _db.Usuarios.FirstOrDefaultAsync(u => u.Email == email);
+        if (usuario == null)
+            return NotFound(new RespuestaDto { Exito = false, Mensaje = "No existe." });
+
+        var otps = _db.OtpVerificaciones.Where(o => o.UsuarioId == usuario.Id);
+        _db.OtpVerificaciones.RemoveRange(otps);
+        _db.Usuarios.Remove(usuario);
+        await _db.SaveChangesAsync();
+        return Ok(new RespuestaDto { Exito = true, Mensaje = $"Usuario {email} eliminado." });
+    }
+
+    // PROBAR SENDGRID (diagnóstico)
+    [HttpPost("test-email")]
+    public async Task<IActionResult> TestEmail([FromQuery] string email)
+    {
+        try
+        {
+            await _emailService.EnviarOtpAsync(email, "Test", "123456");
+            return Ok(new RespuestaDto { Exito = true, Mensaje = "Correo enviado OK." });
+        }
+        catch (Exception ex)
+        {
+            var inner = ex.InnerException?.Message ?? "";
+            return BadRequest(new RespuestaDto { Exito = false, Mensaje = $"Error: {ex.Message} {inner}" });
+        }
+    }
     }
 }
