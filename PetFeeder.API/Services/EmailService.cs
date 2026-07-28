@@ -1,6 +1,5 @@
-﻿using MailKit.Net.Smtp;
-using MailKit.Security;
-using MimeKit;
+﻿using SendGrid;
+using SendGrid.Helpers.Mail;
 
 namespace PetFeeder.API.Services
 {
@@ -8,47 +7,49 @@ namespace PetFeeder.API.Services
     {
         private readonly IConfiguration _config;
 
-        // Se inyecta la configuración para leer la sección "EmailSettings"
         public EmailService(IConfiguration config)
         {
             _config = config;
         }
 
-        // Envía el correo con el código OTP al usuario
         public async Task EnviarOtpAsync(string destinatario, string nombre, string codigo)
         {
-            // 1. Leer los datos de "EmailSettings" del appsettings.json
-            var settings = _config.GetSection("EmailSettings");
-            var host = settings["SmtpHost"];
-            var port = int.Parse(settings["SmtpPort"]!);
-            var fromEmail = settings["FromEmail"];
-            var fromName = settings["FromName"];
-            var appPassword = settings["AppPassword"];
+            var apiKey = _config["SendGrid:ApiKey"]
+                ?? Environment.GetEnvironmentVariable("SENDGRID_API_KEY");
 
-            // 2. Construir el mensaje
-            var mensaje = new MimeMessage();
-            mensaje.From.Add(new MailboxAddress(fromName, fromEmail));
-            mensaje.To.Add(new MailboxAddress(nombre, destinatario));
-            mensaje.Subject = "Tu código de verificación PetFeeder";
+            var fromEmail = _config["SendGrid:FromEmail"]
+                ?? Environment.GetEnvironmentVariable("SENDGRID_FROM_EMAIL")
+                ?? "carlosriosrmz17@gmail.com";
 
-            mensaje.Body = new TextPart("html")
+            var fromName = _config["SendGrid:FromName"] ?? "PetFeeder";
+
+            if (string.IsNullOrEmpty(apiKey))
             {
-                Text = $@"
-                      <div style='font-family:Arial,sans-serif; text-align:center;'>
-                          <h2>Hola {nombre} 👋</h2>
-                          <p>Tu código de verificación de PetFeeder es:</p>
-                          <h1 style='letter-spacing:8px; color:#2e7d32;'>{codigo}</h1>
-                          <p>Este código expira en <b>5 minutos</b>.</p>
-                          <p style='color:#888; font-size:12px;'>Si no fuiste tú, ignora este correo.</p>
-                      </div>"
-            };
+                throw new Exception("SendGrid API key no configurada");
+            }
 
-            // 3. Conectar a Gmail, autenticar y enviar
-            using var client = new SmtpClient();
-            await client.ConnectAsync(host, port, SecureSocketOptions.StartTls);
-            await client.AuthenticateAsync(fromEmail, appPassword);
-            await client.SendAsync(mensaje);
-            await client.DisconnectAsync(true);
+            var client = new SendGridClient(apiKey);
+            var from = new EmailAddress(fromEmail, fromName);
+            var to = new EmailAddress(destinatario, nombre);
+            var subject = "Tu código de verificación PetFeeder";
+
+            var htmlContent = $@"
+                <div style='font-family:Arial,sans-serif; text-align:center;'>
+                    <h2>Hola {nombre}</h2>
+                    <p>Tu código de verificación de PetFeeder es:</p>
+                    <h1 style='letter-spacing:8px; color:#2e7d32;'>{codigo}</h1>
+                    <p>Este código expira en <b>10 minutos</b>.</p>
+                    <p style='color:#888; font-size:12px;'>Si no fuiste tú, ignora este correo.</p>
+                </div>";
+
+            var msg = MailHelper.CreateSingleEmail(from, to, subject, null, htmlContent);
+            var response = await client.SendEmailAsync(msg);
+
+            if (response.StatusCode != System.Net.HttpStatusCode.Accepted)
+            {
+                var body = await response.Body.ReadAsStringAsync();
+                throw new Exception($"SendGrid error: {response.StatusCode} - {body}");
+            }
         }
     }
 }
