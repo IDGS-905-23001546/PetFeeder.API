@@ -29,8 +29,8 @@ namespace PetFeeder.API.Controllers
         public async Task<IActionResult> Crear([FromBody] Horario dto)
         {
             dto.Id = 0;
-            dto.CreatedAt = DateTime.Now;
-            dto.UpdatedAt = DateTime.Now;
+            dto.CreatedAt = DateTime.UtcNow;
+            dto.UpdatedAt = DateTime.UtcNow;
             _db.Horarios.Add(dto);
             await _db.SaveChangesAsync();
             return Ok(dto);
@@ -53,7 +53,7 @@ namespace PetFeeder.API.Controllers
             h.Activo = dto.Activo;
             h.MascotaId = dto.MascotaId;
             h.DispensadorId = dto.DispensadorId;
-            h.UpdatedAt = DateTime.Now;
+            h.UpdatedAt = DateTime.UtcNow;
             await _db.SaveChangesAsync();
             return Ok(h);
         }
@@ -66,7 +66,7 @@ namespace PetFeeder.API.Controllers
             if (h == null)
                 return NotFound(new RespuestaDto { Exito = false, Mensaje = "Horario no encontrado." });
             h.Activo = valor;
-            h.UpdatedAt = DateTime.Now;
+            h.UpdatedAt = DateTime.UtcNow;
             await _db.SaveChangesAsync();
             return Ok(h);
         }

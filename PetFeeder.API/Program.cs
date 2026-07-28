@@ -69,7 +69,7 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-// Swagger habilitado en todos los entornos (quitar después de pruebas)
+// TODO: quitar swagger en produccion despues de pruebas
 app.UseSwagger();
 app.UseSwaggerUI();
 

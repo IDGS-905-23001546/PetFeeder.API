@@ -41,8 +41,8 @@ namespace PetFeeder.API.Controllers
         public async Task<IActionResult> Crear([FromBody] Dispensacion dto)
         {
             dto.Id = 0;
-            if (dto.FechaHora == default) dto.FechaHora = DateTime.Now;
-            dto.CreatedAt = DateTime.Now;
+            if (dto.FechaHora == default) dto.FechaHora = DateTime.UtcNow;
+            dto.CreatedAt = DateTime.UtcNow;
             _db.Dispensaciones.Add(dto);
             await _db.SaveChangesAsync();
             return Ok(dto);

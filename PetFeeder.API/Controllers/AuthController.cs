@@ -52,8 +52,8 @@ namespace PetFeeder.API.Controllers
                     PasswordHash = _passwordService.Encriptar(dto.Password),
                     Verificado = false,
                     Activo = true,
-                    CreatedAt = DateTime.Now,
-                    UpdatedAt = DateTime.Now
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
                 };
                 _db.Usuarios.Add(usuario);
                 await _db.SaveChangesAsync(); // aquí se le asigna el Id
@@ -68,9 +68,9 @@ namespace PetFeeder.API.Controllers
                     Codigo = codigo,
                     Intentos = 0,
                     MaxIntentos = 3,
-                    ExpiraEn = DateTime.Now.AddMinutes(10),
+                    ExpiraEn = DateTime.UtcNow.AddMinutes(10),
                     Usado = false,
-                    CreatedAt = DateTime.Now
+                    CreatedAt = DateTime.UtcNow
                 };
                 _db.OtpVerificaciones.Add(otp);
                 await _db.SaveChangesAsync();
@@ -93,11 +93,10 @@ namespace PetFeeder.API.Controllers
             }
             catch (Exception ex)
             {
-                var inner = ex.InnerException?.Message ?? "sin inner";
                 return StatusCode(500, new RespuestaDto
                 {
                     Exito = false,
-                    Mensaje = $"Error: {ex.Message} | Inner: {inner}"
+                    Mensaje = "Error del servidor. Intenta de nuevo."
                 });
             }
         }
@@ -143,9 +142,9 @@ namespace PetFeeder.API.Controllers
                 Codigo = codigo,
                 Intentos = 0,
                 MaxIntentos = 3,
-                ExpiraEn = DateTime.Now.AddMinutes(10),
+                ExpiraEn = DateTime.UtcNow.AddMinutes(10),
                 Usado = false,
-                CreatedAt = DateTime.Now
+                CreatedAt = DateTime.UtcNow
             };
             _db.OtpVerificaciones.Add(otp);
             await _db.SaveChangesAsync();
@@ -210,7 +209,7 @@ namespace PetFeeder.API.Controllers
             }
 
             // 4. ¿Expiró?
-            if (otp.ExpiraEn < DateTime.Now)
+            if (otp.ExpiraEn < DateTime.UtcNow)
             {
                 return BadRequest(new RespuestaDto
                 {
@@ -244,7 +243,7 @@ namespace PetFeeder.API.Controllers
             // 7. ¡Correcto! Marcar OTP como usado y verificar la cuenta
             otp.Usado = true;
             usuario.Verificado = true;
-            usuario.UpdatedAt = DateTime.Now;
+            usuario.UpdatedAt = DateTime.UtcNow;
             await _db.SaveChangesAsync();
 
             return Ok(new RespuestaDto

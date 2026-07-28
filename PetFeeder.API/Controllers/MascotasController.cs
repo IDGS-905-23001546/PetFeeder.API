@@ -32,8 +32,8 @@ namespace PetFeeder.API.Controllers
             if (dto.Activa) await DesactivarOtras(dto.UsuarioId, 0);
 
             dto.Id = 0;
-            dto.CreatedAt = DateTime.Now;
-            dto.UpdatedAt = DateTime.Now;
+            dto.CreatedAt = DateTime.UtcNow;
+            dto.UpdatedAt = DateTime.UtcNow;
             _db.Mascotas.Add(dto);
             await _db.SaveChangesAsync();
             return Ok(dto);
@@ -57,7 +57,7 @@ namespace PetFeeder.API.Controllers
             m.Tamano = dto.Tamano;
             m.Activa = dto.Activa;
             m.FotoUri = dto.FotoUri;
-            m.UpdatedAt = DateTime.Now;
+            m.UpdatedAt = DateTime.UtcNow;
             await _db.SaveChangesAsync();
             return Ok(m);
         }
