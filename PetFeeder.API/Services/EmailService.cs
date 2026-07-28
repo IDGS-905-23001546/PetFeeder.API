@@ -19,7 +19,7 @@ namespace PetFeeder.API.Services
 
             var fromEmail = _config["SendGrid:FromEmail"]
                 ?? Environment.GetEnvironmentVariable("SENDGRID_FROM_EMAIL")
-                ?? "carlosriosrmz17@gmail.com";
+                ?? "eduardorioramirez10@gmail.com";
 
             var fromName = _config["SendGrid:FromName"] ?? "PetFeeder";
 
