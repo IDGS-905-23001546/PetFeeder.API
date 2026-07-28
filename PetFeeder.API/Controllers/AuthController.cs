@@ -93,10 +93,11 @@ namespace PetFeeder.API.Controllers
             }
             catch (Exception ex)
             {
+                var inner = ex.InnerException?.Message ?? "sin inner";
                 return StatusCode(500, new RespuestaDto
                 {
                     Exito = false,
-                    Mensaje = $"Error del servidor: {ex.Message}"
+                    Mensaje = $"Error: {ex.Message} | Inner: {inner}"
                 });
             }
         }
