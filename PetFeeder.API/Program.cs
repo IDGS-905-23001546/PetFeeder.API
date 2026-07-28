@@ -54,17 +54,25 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.EnsureCreated();
 
-    // Seed: si no hay usuarios, crear el usuario de prueba
-    if (!db.Usuarios.Any())
+    // Seed: crear usuario de prueba si no existe, o actualizar hash si cambió
+    var seedEmail = "carlosriosrmz17@gmail.com";
+    var seedHash = "$2b$11$tO3ah0u9YekAGJE8.Jm.FuxDk2mUguqg.jjmn3pNP7Bfu.aWdZVZK";
+    var existing = db.Usuarios.FirstOrDefault(u => u.Email == seedEmail);
+    if (existing == null)
     {
         db.Usuarios.Add(new PetFeeder.API.Models.Usuario
         {
             Nombre = "Carlos",
-            Email = "carlosriosrmz17@gmail.com",
-            PasswordHash = "$2a$11$xRDdvigbrklRx7Mlfmz5NObDQunI71SBzSwDeBT0Ar0nYocjEZZCe",
+            Email = seedEmail,
+            PasswordHash = seedHash,
             Verificado = true,
             Activo = true
         });
+        db.SaveChanges();
+    }
+    else if (existing.PasswordHash != seedHash)
+    {
+        existing.PasswordHash = seedHash;
         db.SaveChanges();
     }
 }

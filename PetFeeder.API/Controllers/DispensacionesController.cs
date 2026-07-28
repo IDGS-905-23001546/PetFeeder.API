@@ -28,7 +28,7 @@ namespace PetFeeder.API.Controllers
         [HttpGet("usuario/{usuarioId}/hoy")]
         public async Task<IActionResult> DeHoy(int usuarioId)
         {
-            var hoy = DateTime.Today;
+            var hoy = DateTime.UtcNow.Date;
             var lista = await _db.Dispensaciones
                 .Where(d => d.UsuarioId == usuarioId && d.FechaHora >= hoy)
                 .OrderByDescending(d => d.FechaHora)
