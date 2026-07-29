@@ -341,4 +341,20 @@ public class TempController : ControllerBase
         await _db.SaveChangesAsync();
         return Ok(new { exito = true, mensaje = $"Usuario {email} eliminado." });
     }
+
+    // DELETE /api/temp/todos
+    [HttpDelete("todos")]
+    public async Task<IActionResult> BorrarTodos()
+    {
+        _db.OtpVerificaciones.RemoveRange(_db.OtpVerificaciones);
+        _db.Sesiones.RemoveRange(_db.Sesiones);
+        _db.Notificaciones.RemoveRange(_db.Notificaciones);
+        _db.Dispensaciones.RemoveRange(_db.Dispensaciones);
+        _db.Horarios.RemoveRange(_db.Horarios);
+        _db.Dispensadores.RemoveRange(_db.Dispensadores);
+        _db.Mascotas.RemoveRange(_db.Mascotas);
+        _db.Usuarios.RemoveRange(_db.Usuarios);
+        await _db.SaveChangesAsync();
+        return Ok(new { exito = true, mensaje = "Todos los usuarios y sus datos eliminados." });
+    }
 }
