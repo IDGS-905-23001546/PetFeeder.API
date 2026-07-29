@@ -75,14 +75,19 @@ namespace PetFeeder.API.Controllers
                 _db.OtpVerificaciones.Add(otp);
                 await _db.SaveChangesAsync();
 
-                // 5. Intentar enviar el código por correo (si falla, no bloquea el registro)
+                // 5. Intentar enviar el código por correo
                 try
                 {
                     await _emailService.EnviarOtpAsync(usuario.Email, usuario.Nombre, codigo);
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[WARNING] No se pudo enviar el correo OTP: {ex.Message}");
+                    var inner = ex.InnerException?.Message ?? "";
+                    return StatusCode(500, new RespuestaDto
+                    {
+                        Exito = false,
+                        Mensaje = $"Error al enviar correo: {ex.Message} {inner}"
+                    });
                 }
 
                 return Ok(new RespuestaDto
@@ -313,36 +318,27 @@ namespace PetFeeder.API.Controllers
 
             return Ok(new RespuestaDto { Exito = true, Mensaje = "Contraseña actualizada correctamente." });
         }
+    }
+}
 
-    // BORRAR USUARIO POR EMAIL (temporal para limpiar cuentas de prueba)
+// AUTH DELELE (temporal para limpiar)
+[ApiController]
+[Route("api/temp")]
+public class TempController : ControllerBase
+{
+    private readonly AppDbContext _db;
+    public TempController(AppDbContext db) { _db = db; }
+
+    // DELETE /api/temp/usuario?email=xxx
     [HttpDelete("usuario")]
     public async Task<IActionResult> BorrarUsuario([FromQuery] string email)
     {
         var usuario = await _db.Usuarios.FirstOrDefaultAsync(u => u.Email == email);
-        if (usuario == null)
-            return NotFound(new RespuestaDto { Exito = false, Mensaje = "No existe." });
-
+        if (usuario == null) return NotFound(new { exito = false, mensaje = "No existe." });
         var otps = _db.OtpVerificaciones.Where(o => o.UsuarioId == usuario.Id);
         _db.OtpVerificaciones.RemoveRange(otps);
         _db.Usuarios.Remove(usuario);
         await _db.SaveChangesAsync();
-        return Ok(new RespuestaDto { Exito = true, Mensaje = $"Usuario {email} eliminado." });
-    }
-
-    // PROBAR SENDGRID (diagnóstico)
-    [HttpPost("test-email")]
-    public async Task<IActionResult> TestEmail([FromQuery] string email)
-    {
-        try
-        {
-            await _emailService.EnviarOtpAsync(email, "Test", "123456");
-            return Ok(new RespuestaDto { Exito = true, Mensaje = "Correo enviado OK." });
-        }
-        catch (Exception ex)
-        {
-            var inner = ex.InnerException?.Message ?? "";
-            return BadRequest(new RespuestaDto { Exito = false, Mensaje = $"Error: {ex.Message} {inner}" });
-        }
-    }
+        return Ok(new { exito = true, mensaje = $"Usuario {email} eliminado." });
     }
 }
