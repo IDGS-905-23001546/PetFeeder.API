@@ -44,7 +44,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // Servicio para encriptar/verificar contraseñas con BCrypt
 builder.Services.AddScoped<PasswordService>();
 
-builder.Services.AddScoped<EmailService>();
+builder.Services.AddHttpClient<EmailService>();
 
 var app = builder.Build();
 

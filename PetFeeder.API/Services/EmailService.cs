@@ -1,55 +1,59 @@
-﻿using SendGrid;
-using SendGrid.Helpers.Mail;
+﻿using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
 
 namespace PetFeeder.API.Services
 {
     public class EmailService
     {
+        private readonly HttpClient _http;
         private readonly IConfiguration _config;
 
-        public EmailService(IConfiguration config)
+        public EmailService(HttpClient http, IConfiguration config)
         {
+            _http = http;
             _config = config;
         }
 
         public async Task EnviarOtpAsync(string destinatario, string nombre, string codigo)
         {
-            var apiKey = _config["SendGrid:ApiKey"]
-                ?? Environment.GetEnvironmentVariable("SENDGRID_API_KEY");
-
-            var fromEmail = _config["SendGrid:FromEmail"]
-                ?? Environment.GetEnvironmentVariable("SENDGRID_FROM_EMAIL")
-                ?? "eduardorioramirez10@gmail.com";
-
-            var fromName = _config["SendGrid:FromName"] ?? "PetFeeder";
+            var apiKey = Environment.GetEnvironmentVariable("RESEND_API_KEY")
+                ?? _config["Resend:ApiKey"]
+                ?? "";
 
             if (string.IsNullOrEmpty(apiKey))
+                throw new Exception("RESEND_API_KEY no configurada");
+
+            var from = _config["Resend:FromEmail"] ?? "onboarding@resend.dev";
+            var fromName = _config["Resend:FromName"] ?? "PetFeeder";
+
+            var body = new
             {
-                throw new Exception("SendGrid API key no configurada");
-            }
+                from = $"{fromName} <{from}>",
+                to = new[] { destinatario },
+                subject = "Tu codigo de verificacion PetFeeder",
+                html = $@"
+                    <div style='font-family:Arial,sans-serif; text-align:center;'>
+                        <h2>Hola {nombre}</h2>
+                        <p>Tu codigo de verificacion de PetFeeder es:</p>
+                        <h1 style='letter-spacing:8px; color:#2e7d32;'>{codigo}</h1>
+                        <p>Este codigo expira en <b>10 minutos</b>.</p>
+                        <p style='color:#888; font-size:12px;'>Si no fuiste tu, ignora este correo.</p>
+                    </div>"
+            };
 
-            var client = new SendGridClient(apiKey);
-            var from = new EmailAddress(fromEmail, fromName);
-            var to = new EmailAddress(destinatario, nombre);
-            var subject = "Tu código de verificación PetFeeder";
+            var json = JsonSerializer.Serialize(body);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            var htmlContent = $@"
-                <div style='font-family:Arial,sans-serif; text-align:center;'>
-                    <h2>Hola {nombre}</h2>
-                    <p>Tu código de verificación de PetFeeder es:</p>
-                    <h1 style='letter-spacing:8px; color:#2e7d32;'>{codigo}</h1>
-                    <p>Este código expira en <b>10 minutos</b>.</p>
-                    <p style='color:#888; font-size:12px;'>Si no fuiste tú, ignora este correo.</p>
-                </div>";
+            var request = new HttpRequestMessage(HttpMethod.Post, "https://api.resend.com/emails");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+            request.Content = content;
 
-            var msg = MailHelper.CreateSingleEmail(from, to, subject, null, htmlContent);
-            var response = await client.SendEmailAsync(msg);
+            var response = await _http.SendAsync(request);
+            var responseBody = await response.Content.ReadAsStringAsync();
 
-            if (response.StatusCode != System.Net.HttpStatusCode.Accepted)
-            {
-                var body = await response.Body.ReadAsStringAsync();
-                throw new Exception($"SendGrid error: {response.StatusCode} - {body}");
-            }
+            if (!response.IsSuccessStatusCode)
+                throw new Exception($"Resend error: {response.StatusCode} - {responseBody}");
         }
     }
 }
