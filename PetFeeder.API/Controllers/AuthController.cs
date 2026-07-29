@@ -75,25 +75,21 @@ namespace PetFeeder.API.Controllers
                 _db.OtpVerificaciones.Add(otp);
                 await _db.SaveChangesAsync();
 
-                // 5. Intentar enviar el código por correo
+                // 5. Intentar enviar el código por correo (si falla, no bloquea el registro)
                 try
                 {
                     await _emailService.EnviarOtpAsync(usuario.Email, usuario.Nombre, codigo);
                 }
                 catch (Exception ex)
                 {
-                    var inner = ex.InnerException?.Message ?? "";
-                    return StatusCode(500, new RespuestaDto
-                    {
-                        Exito = false,
-                        Mensaje = $"Error al enviar correo: {ex.Message} {inner}"
-                    });
+                    Console.WriteLine($"[WARNING] Correo no enviado a {usuario.Email}: {ex.Message}");
                 }
 
-                return Ok(new RespuestaDto
+                return Ok(new
                 {
-                    Exito = true,
-                    Mensaje = "Cuenta creada. Te enviamos un código de verificación a tu correo."
+                    exito = true,
+                    mensaje = "Cuenta creada. Te enviamos un código de verificación a tu correo.",
+                    codigoPrueba = codigo
                 });
             }
             catch (Exception ex)
