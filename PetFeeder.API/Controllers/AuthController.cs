@@ -342,9 +342,9 @@ public class TempController : ControllerBase
         return Ok(new { exito = true, mensaje = $"Usuario {email} eliminado." });
     }
 
-    // DELETE /api/temp/todos
-    [HttpDelete("todos")]
-    public async Task<IActionResult> BorrarTodos()
+    // GET /api/temp/todos  (abre en el navegador y borra todo)
+    [HttpGet("todos")]
+    public async Task<IActionResult> BorrarTodosGet()
     {
         _db.OtpVerificaciones.RemoveRange(_db.OtpVerificaciones);
         _db.Sesiones.RemoveRange(_db.Sesiones);
