@@ -28,15 +28,24 @@ namespace PetFeeder.API.Services
             if (_secondaryFactory != null && changes.Count > 0)
             {
                 using var secondary = await _secondaryFactory.CreateDbContextAsync(ct);
+                await secondary.Database.EnsureCreatedAsync(ct);
+
                 foreach (var change in changes)
                 {
                     var entry = secondary.Entry(change.Entity);
-                    entry.State = change.State;
                     if (change.State == EntityState.Added)
                     {
-                        var idProp = entry.Metadata.FindPrimaryKey()?.Properties.FirstOrDefault();
-                        if (idProp != null)
-                            entry.Property(idProp.Name).IsTemporary = false;
+                        var pk = entry.Metadata.FindPrimaryKey();
+                        if (pk?.Properties.Count == 1)
+                        {
+                            var pkProp = pk.Properties[0];
+                            entry.Property(pkProp.Name).CurrentValue = 0;
+                        }
+                        entry.State = EntityState.Added;
+                    }
+                    else
+                    {
+                        entry.State = change.State;
                     }
                 }
                 await secondary.SaveChangesAsync(ct);

@@ -37,7 +37,7 @@ builder.Services.AddScoped<DualWriteService>(sp =>
 });
 
 builder.Services.AddScoped<PasswordService>();
-builder.Services.AddHttpClient<EmailService>();
+builder.Services.AddScoped<EmailService>();
 
 var app = builder.Build();
 
