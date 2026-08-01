@@ -114,6 +114,56 @@ namespace PetFeeder.API.Controllers
                 Mensaje = request.Activo ? "Usuario activado." : "Usuario suspendido."
             });
         }
+
+        // PUT /api/Usuarios/{id}/rol  (convertir cliente <-> admin desde la web)
+        [HttpPut("{id}/rol")]
+        public async Task<IActionResult> CambiarRol(int id, [FromBody] CambiarRolRequest request)
+        {
+            var usuario = await _db.Usuarios.FindAsync(id);
+            if (usuario == null)
+                return NotFound(new RespuestaDto { Exito = false, Mensaje = "Usuario no encontrado." });
+
+            var rol = request.Rol?.Trim().ToLower();
+            if (rol != "admin" && rol != "cliente")
+                return BadRequest(new RespuestaDto { Exito = false, Mensaje = "El rol debe ser 'admin' o 'cliente'." });
+
+            usuario.Rol = rol;
+            usuario.UpdatedAt = DateTime.UtcNow;
+            await _dual.SaveChangesAsync();
+
+            return Ok(new RespuestaDto
+            {
+                Exito = true,
+                Mensaje = rol == "admin" ? "Usuario convertido a administrador." : "Usuario cambiado a cliente."
+            });
+        }
+
+        // PUT /api/Usuarios/{id}/verificar  (verificar cuenta manualmente desde el panel admin)
+        [HttpPut("{id}/verificar")]
+        public async Task<IActionResult> Verificar(int id)
+        {
+            var usuario = await _db.Usuarios.FindAsync(id);
+            if (usuario == null)
+                return NotFound(new RespuestaDto { Exito = false, Mensaje = "Usuario no encontrado." });
+
+            if (usuario.Verificado)
+                return Ok(new RespuestaDto { Exito = true, Mensaje = "El usuario ya estaba verificado." });
+
+            usuario.Verificado = true;
+            usuario.UpdatedAt = DateTime.UtcNow;
+            await _dual.SaveChangesAsync();
+
+            return Ok(new RespuestaDto
+            {
+                Exito = true,
+                Mensaje = "Cuenta verificada manualmente por el administrador."
+            });
+        }
+    }
+
+    public class CambiarRolRequest
+    {
+        public string? Rol { get; set; }
     }
 
     public class EstadoUsuarioRequest
