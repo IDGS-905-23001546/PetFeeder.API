@@ -25,6 +25,9 @@ namespace PetFeeder.API.Models
         [Column("verificado")]
         public bool Verificado { get; set; }
 
+        [Column("rol")]
+        public string Rol { get; set; } = "cliente";
+
         [Column("activo")]
         public bool Activo { get; set; } = true;
 

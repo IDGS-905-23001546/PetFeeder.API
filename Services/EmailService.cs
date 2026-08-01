@@ -47,5 +47,45 @@ namespace PetFeeder.API.Services
 
             await smtp.SendMailAsync(mail);
         }
+
+        public async Task EnviarCotizacionAsync(
+            string correo, string contenedor, string material, int cantidad, decimal total)
+        {
+            var smtpHost = _config["EmailSettings:SmtpHost"] ?? "smtp.gmail.com";
+            var smtpPort = int.Parse(_config["EmailSettings:SmtpPort"] ?? "587");
+            var fromEmail = _config["EmailSettings:FromEmail"] ?? "";
+            var fromName = _config["EmailSettings:FromName"] ?? "PetFeeder";
+            var appPassword = _config["EmailSettings:AppPassword"] ?? "";
+
+            if (string.IsNullOrEmpty(fromEmail) || string.IsNullOrEmpty(appPassword))
+                throw new Exception("EmailSettings no configurado en appsettings.json");
+
+            using var smtp = new SmtpClient(smtpHost, smtpPort)
+            {
+                EnableSsl = true,
+                Credentials = new NetworkCredential(fromEmail, appPassword)
+            };
+
+            var mail = new MailMessage
+            {
+                From = new MailAddress(fromEmail, fromName),
+                Subject = "Cotizacion PetFeeder",
+                IsBodyHtml = true,
+                Body = $@"
+                    <div style='font-family:Arial,sans-serif;'>
+                        <h2>Solicitud de cotizacion</h2>
+                        <table style='border-collapse:collapse;'>
+                            <tr><td style='padding:6px;border:1px solid #ccc;'>Contenedor</td><td style='padding:6px;border:1px solid #ccc;'>{contenedor}</td></tr>
+                            <tr><td style='padding:6px;border:1px solid #ccc;'>Material</td><td style='padding:6px;border:1px solid #ccc;'>{material}</td></tr>
+                            <tr><td style='padding:6px;border:1px solid #ccc;'>Cantidad</td><td style='padding:6px;border:1px solid #ccc;'>{cantidad}</td></tr>
+                            <tr><td style='padding:6px;border:1px solid #ccc;'>Total</td><td style='padding:6px;border:1px solid #ccc;'>${total:N2} MXN</td></tr>
+                        </table>
+                        <p>Responder a: {correo}</p>
+                    </div>"
+            };
+            mail.To.Add(fromEmail);
+
+            await smtp.SendMailAsync(mail);
+        }
     }
 }

@@ -8,6 +8,17 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// ── CORS para la web Angular ──
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("PermitirWeb", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
 // ── DUAL WRITE: SQL Server local (SSMS) + SQL Server Somee (nube) ──
 
 var someeConnStr = Environment.GetEnvironmentVariable("SOMEE_CONNECTION_STRING");
@@ -46,11 +57,17 @@ using (var scope = app.Services.CreateScope())
     var sp = scope.ServiceProvider;
     var db = sp.GetRequiredService<AppDbContext>();
     db.Database.EnsureCreated();
+
+    // Asegurar tablas nuevas de la web + columna rol, y sembrar el admin
+    var hashAdmin = sp.GetRequiredService<PasswordService>().Encriptar("Admin123");
+    DbInitializer.AsegurarEsquema(db);
+    DbInitializer.SembrarAdmin(db, hashAdmin);
 }
 
 app.UseSwagger();
 app.UseSwaggerUI();
 app.UseHttpsRedirection();
+app.UseCors("PermitirWeb");
 app.UseAuthorization();
 app.MapControllers();
 app.Run();
