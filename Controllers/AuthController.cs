@@ -283,7 +283,20 @@ namespace PetFeeder.API.Controllers
                 });
             }
 
-            // 4. Todo bien -> devolver datos del usuario (SIN el password)
+            // 4. Registrar la sesión de inicio de sesión (app móvil)
+            _db.Sesiones.Add(new Sesion
+            {
+                UsuarioId = usuario.Id,
+                Token = Guid.NewGuid().ToString("N"),
+                Dispositivo = "app",
+                IpOrigen = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                Activa = true,
+                ExpiraEn = DateTime.UtcNow.AddDays(30),
+                CreatedAt = DateTime.UtcNow
+            });
+            await _dual.SaveChangesAsync();
+
+            // 5. Todo bien -> devolver datos del usuario (SIN el password)
             return Ok(new UsuarioRespuestaDto
             {
                 Id = usuario.Id,

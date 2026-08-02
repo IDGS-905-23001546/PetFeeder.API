@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using PetFeeder.API.Data;
 using PetFeeder.API.DTOs;
+using PetFeeder.API.Models;
 using PetFeeder.API.Services;
 
 namespace PetFeeder.API.Controllers
@@ -45,6 +46,18 @@ namespace PetFeeder.API.Controllers
                     Mensaje = "Tu cuenta aun no esta verificada."
                 });
             }
+
+            _db.Sesiones.Add(new Sesion
+            {
+                UsuarioId = usuario.Id,
+                Token = Guid.NewGuid().ToString("N"),
+                Dispositivo = "web",
+                IpOrigen = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                Activa = true,
+                ExpiraEn = DateTime.UtcNow.AddDays(30),
+                CreatedAt = DateTime.UtcNow
+            });
+            await _dual.SaveChangesAsync();
 
             return Ok(new UsuarioRespuestaDto
             {
