@@ -105,6 +105,31 @@ namespace PetFeeder.API.Controllers
             });
         }
 
+        // GET /api/Dashboard/cliente/{usuarioId}/comida-7-dias
+        [HttpGet("cliente/{usuarioId}/comida-7-dias")]
+        public async Task<IActionResult> Comida7Dias(int usuarioId)
+        {
+            var inicio = DateTime.UtcNow.Date.AddDays(-6);
+            var fin = DateTime.UtcNow.Date.AddDays(1);
+
+            var lista = await _db.Dispensaciones
+                .Where(d => d.UsuarioId == usuarioId && d.Estado == "ejecutada" && d.FechaHora >= inicio && d.FechaHora < fin)
+                .ToListAsync();
+
+            var porDia = Enumerable.Range(0, 7)
+                .Select(i => inicio.AddDays(i))
+                .Select(dia => new
+                {
+                    fecha = dia.ToString("yyyy-MM-dd"),
+                    etiqueta = dia.ToString("dd/MM"),
+                    gramos = Math.Round(lista.Where(d => d.FechaHora.Date == dia.Date).Sum(d => d.PorcionGramos), 1),
+                    dispensaciones = lista.Count(d => d.FechaHora.Date == dia.Date)
+                })
+                .ToList();
+
+            return Ok(porDia);
+        }
+
         // GET /api/Dashboard/admin
         [HttpGet("admin")]
         public async Task<IActionResult> Admin()

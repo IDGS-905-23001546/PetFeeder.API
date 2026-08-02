@@ -109,6 +109,31 @@ namespace PetFeeder.API.Controllers
             });
         }
 
+        // PUT /api/Usuarios/{id}  (actualizar perfil propio: nombre, telefono)
+        [HttpPut("{id}")]
+        public async Task<IActionResult> ActualizarPerfil(int id, [FromBody] ActualizarPerfilRequest request)
+        {
+            var usuario = await _db.Usuarios.FindAsync(id);
+            if (usuario == null)
+                return NotFound(new RespuestaDto { Exito = false, Mensaje = "Usuario no encontrado." });
+
+            if (!string.IsNullOrWhiteSpace(request.Nombre))
+                usuario.Nombre = request.Nombre.Trim();
+
+            usuario.Telefono = string.IsNullOrWhiteSpace(request.Telefono) ? null : request.Telefono.Trim();
+            usuario.UpdatedAt = DateTime.UtcNow;
+            await _dual.SaveChangesAsync();
+
+            return Ok(new UsuarioRespuestaDto
+            {
+                Id = usuario.Id,
+                Nombre = usuario.Nombre,
+                Email = usuario.Email,
+                Verificado = usuario.Verificado,
+                Rol = usuario.Rol
+            });
+        }
+
         // PUT /api/Usuarios/{id}/estado  (suspender/activar desde la web)
         [HttpPut("{id}/estado")]
         public async Task<IActionResult> CambiarEstado(int id, [FromBody] EstadoUsuarioRequest request)
@@ -182,5 +207,11 @@ namespace PetFeeder.API.Controllers
     public class EstadoUsuarioRequest
     {
         public bool Activo { get; set; }
+    }
+
+    public class ActualizarPerfilRequest
+    {
+        public string? Nombre { get; set; }
+        public string? Telefono { get; set; }
     }
 }
