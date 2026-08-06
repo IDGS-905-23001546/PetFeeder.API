@@ -9,3 +9,15 @@ services:
         sync: false
       - key: ASPNETCORE_URLS
         value: http://localhost:8080
+      # Correo OTP (EmailSettings). Sin estos valores, la API en Render
+      # no puede enviar el código de verificación. .NET lee "X__Y" como "X:Y".
+      - key: EmailSettings__SmtpHost
+        sync: false
+      - key: EmailSettings__SmtpPort
+        sync: false
+      - key: EmailSettings__FromEmail
+        sync: false
+      - key: EmailSettings__FromName
+        sync: false
+      - key: EmailSettings__AppPassword
+        sync: false
