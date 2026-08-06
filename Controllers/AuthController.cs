@@ -75,15 +75,18 @@ namespace PetFeeder.API.Controllers
                 _db.OtpVerificaciones.Add(otp);
                 await _dual.SaveChangesAsync();
 
-                // 5. Intentar enviar el código por correo (si falla, no bloquea el registro)
-                try
+                // 5. Intentar enviar el código por correo (sin bloquear la respuesta)
+                _ = Task.Run(async () =>
                 {
-                    await _emailService.EnviarOtpAsync(usuario.Email, usuario.Nombre, codigo);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[WARNING] Correo no enviado a {usuario.Email}: {ex.Message}");
-                }
+                    try
+                    {
+                        await _emailService.EnviarOtpAsync(usuario.Email, usuario.Nombre, codigo);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[WARNING] Correo no enviado a {usuario.Email}: {ex.Message}");
+                    }
+                });
 
                 return Ok(new
                 {
@@ -150,15 +153,18 @@ namespace PetFeeder.API.Controllers
             _db.OtpVerificaciones.Add(otp);
             await _dual.SaveChangesAsync();
 
-            // 5. Intentar enviar el nuevo código por correo (si falla, no bloquea)
-            try
+            // 5. Intentar enviar el nuevo código por correo (sin bloquear la respuesta)
+            _ = Task.Run(async () =>
             {
-                await _emailService.EnviarOtpAsync(usuario.Email, usuario.Nombre, codigo);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[WARNING] No se pudo enviar el correo OTP: {ex.Message}");
-            }
+                try
+                {
+                    await _emailService.EnviarOtpAsync(usuario.Email, usuario.Nombre, codigo);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[WARNING] No se pudo enviar el correo OTP: {ex.Message}");
+                }
+            });
 
             return Ok(new RespuestaDto
             {

@@ -26,6 +26,7 @@ namespace PetFeeder.API.Services
             using var smtp = new SmtpClient(smtpHost, smtpPort)
             {
                 EnableSsl = true,
+                Timeout = 10000,
                 Credentials = new NetworkCredential(fromEmail, appPassword)
             };
 
