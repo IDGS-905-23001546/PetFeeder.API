@@ -1,78 +1,39 @@
-﻿using System.Net;
-using System.Net.Mail;
+﻿using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
 
 namespace PetFeeder.API.Services
 {
     public class EmailService
     {
         private readonly IConfiguration _config;
+        private readonly IHttpClientFactory _httpClientFactory;
 
-        public EmailService(IConfiguration config)
+        public EmailService(IConfiguration config, IHttpClientFactory httpClientFactory)
         {
             _config = config;
+            _httpClientFactory = httpClientFactory;
         }
 
         public async Task EnviarOtpAsync(string destinatario, string nombre, string codigo)
         {
-            var smtpHost = _config["EmailSettings:SmtpHost"] ?? "smtp.gmail.com";
-            var smtpPort = int.Parse(_config["EmailSettings:SmtpPort"] ?? "587");
-            var fromEmail = _config["EmailSettings:FromEmail"] ?? "";
-            var fromName = _config["EmailSettings:FromName"] ?? "PetFeeder";
-            var appPassword = _config["EmailSettings:AppPassword"] ?? "";
-
-            if (string.IsNullOrEmpty(fromEmail) || string.IsNullOrEmpty(appPassword))
-                throw new Exception("EmailSettings no configurado en appsettings.json");
-
-            using var smtp = new SmtpClient(smtpHost, smtpPort)
-            {
-                EnableSsl = true,
-                Timeout = 10000,
-                Credentials = new NetworkCredential(fromEmail, appPassword)
-            };
-
-            var mail = new MailMessage
-            {
-                From = new MailAddress(fromEmail, fromName),
-                Subject = "Tu codigo de verificacion PetFeeder",
-                IsBodyHtml = true,
-                Body = $@"
+            var asunto = "Tu codigo de verificacion PetFeeder";
+            var cuerpo = $@"
                     <div style='font-family:Arial,sans-serif; text-align:center;'>
                         <h2>Hola {nombre}</h2>
                         <p>Tu codigo de verificacion de PetFeeder es:</p>
                         <h1 style='letter-spacing:8px; color:#2e7d32;'>{codigo}</h1>
                         <p>Este codigo expira en <b>10 minutos</b>.</p>
                         <p style='color:#888; font-size:12px;'>Si no fuiste tu, ignora este correo.</p>
-                    </div>"
-            };
-            mail.To.Add(destinatario);
-
-            await smtp.SendMailAsync(mail);
+                    </div>";
+            await EnviarAsync(destinatario, asunto, cuerpo);
         }
 
         public async Task EnviarCotizacionAsync(
             string correo, string contenedor, string material, int cantidad, decimal total)
         {
-            var smtpHost = _config["EmailSettings:SmtpHost"] ?? "smtp.gmail.com";
-            var smtpPort = int.Parse(_config["EmailSettings:SmtpPort"] ?? "587");
-            var fromEmail = _config["EmailSettings:FromEmail"] ?? "";
-            var fromName = _config["EmailSettings:FromName"] ?? "PetFeeder";
-            var appPassword = _config["EmailSettings:AppPassword"] ?? "";
-
-            if (string.IsNullOrEmpty(fromEmail) || string.IsNullOrEmpty(appPassword))
-                throw new Exception("EmailSettings no configurado en appsettings.json");
-
-            using var smtp = new SmtpClient(smtpHost, smtpPort)
-            {
-                EnableSsl = true,
-                Credentials = new NetworkCredential(fromEmail, appPassword)
-            };
-
-            var mail = new MailMessage
-            {
-                From = new MailAddress(fromEmail, fromName),
-                Subject = "Cotizacion PetFeeder",
-                IsBodyHtml = true,
-                Body = $@"
+            var asunto = "Cotizacion PetFeeder";
+            var cuerpo = $@"
                     <div style='font-family:Arial,sans-serif;'>
                         <h2>Solicitud de cotizacion</h2>
                         <table style='border-collapse:collapse;'>
@@ -82,11 +43,40 @@ namespace PetFeeder.API.Services
                             <tr><td style='padding:6px;border:1px solid #ccc;'>Total</td><td style='padding:6px;border:1px solid #ccc;'>${total:N2} MXN</td></tr>
                         </table>
                         <p>Responder a: {correo}</p>
-                    </div>"
-            };
-            mail.To.Add(fromEmail);
+                    </div>";
+            await EnviarAsync(correo, asunto, cuerpo);
+        }
 
-            await smtp.SendMailAsync(mail);
+        private async Task EnviarAsync(string destinatario, string asunto, string cuerpoHtml)
+        {
+            var apiKey = _config["Resend:ApiKey"] ?? "";
+            var fromEmail = _config["Resend:FromEmail"] ?? "";
+            var fromName = _config["Resend:FromName"] ?? "PetFeeder";
+
+            if (string.IsNullOrEmpty(apiKey) || string.IsNullOrEmpty(fromEmail))
+                throw new Exception("Resend no configurado (Resend:ApiKey o Resend:FromEmail faltan).");
+
+            using var http = _httpClientFactory.CreateClient("resend");
+            http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+
+            var payload = new
+            {
+                from = $"{fromName} <{fromEmail}>",
+                to = new[] { destinatario },
+                subject = asunto,
+                html = cuerpoHtml
+            };
+
+            var contenido = new StringContent(
+                JsonSerializer.Serialize(payload),
+                Encoding.UTF8,
+                "application/json");
+
+            var resp = await http.PostAsync("https://api.resend.com/emails", contenido);
+            var body = await resp.Content.ReadAsStringAsync();
+
+            if (!resp.IsSuccessStatusCode)
+                throw new Exception($"Resend respondio {resp.StatusCode}: {body}");
         }
     }
 }

@@ -49,6 +49,7 @@ builder.Services.AddScoped<DualWriteService>(sp =>
 
 builder.Services.AddScoped<PasswordService>();
 builder.Services.AddScoped<EmailService>();
+builder.Services.AddHttpClient("resend");
 
 var app = builder.Build();
 
