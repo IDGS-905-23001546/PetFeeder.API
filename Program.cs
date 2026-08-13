@@ -63,6 +63,13 @@ using (var scope = app.Services.CreateScope())
     var hashAdmin = sp.GetRequiredService<PasswordService>().Encriptar("Admin123");
     DbInitializer.AsegurarEsquema(db);
     DbInitializer.SembrarAdmin(db, hashAdmin);
+
+    // Mantener también la BD secundaria (local SSMS) con el mismo esquema
+    if (useSomee && hasLocal)
+    {
+        using var secondary = sp.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContext();
+        DbInitializer.AsegurarEsquema(secondary);
+    }
 }
 
 app.UseSwagger();

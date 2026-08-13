@@ -85,6 +85,22 @@ namespace PetFeeder.API.Services
                 BEGIN
                     ALTER TABLE [usuarios] ADD [rol] NVARCHAR(50) NOT NULL DEFAULT 'cliente';
                 END;
+
+                -- 3. Seguimiento de opiniones (solo si falta)
+                IF COL_LENGTH('opiniones', 'estado') IS NULL
+                BEGIN
+                    ALTER TABLE [opiniones] ADD [estado] NVARCHAR(50) NOT NULL DEFAULT 'Nuevo';
+                END;
+
+                IF COL_LENGTH('opiniones', 'respuesta_admin') IS NULL
+                BEGIN
+                    ALTER TABLE [opiniones] ADD [respuesta_admin] NVARCHAR(MAX) NULL;
+                END;
+
+                IF COL_LENGTH('opiniones', 'fecha_respuesta') IS NULL
+                BEGIN
+                    ALTER TABLE [opiniones] ADD [fecha_respuesta] NVARCHAR(30) NULL;
+                END;
             ");
         }
 

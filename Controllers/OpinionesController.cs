@@ -31,5 +31,39 @@ namespace PetFeeder.API.Controllers
             await _dual.SaveChangesAsync();
             return Ok(dto);
         }
+
+        [HttpPut("{id:int}")]
+        public async Task<IActionResult> Actualizar(int id, [FromBody] Opinion dto)
+        {
+            var opinion = await _db.Opiniones.FirstOrDefaultAsync(o => o.Id == id);
+            if (opinion == null)
+                return NotFound(new { mensaje = "La opinión no existe." });
+
+            if (!string.IsNullOrWhiteSpace(dto.Estado))
+                opinion.Estado = dto.Estado;
+
+            if (dto.RespuestaAdmin != null)
+            {
+                opinion.RespuestaAdmin = dto.RespuestaAdmin.Trim();
+                opinion.FechaRespuesta = string.IsNullOrWhiteSpace(opinion.RespuestaAdmin)
+                    ? null
+                    : DateTime.Now.ToString("yyyy-MM-dd HH:mm");
+            }
+
+            await _dual.SaveChangesAsync();
+            return Ok(opinion);
+        }
+
+        [HttpDelete("{id:int}")]
+        public async Task<IActionResult> Eliminar(int id)
+        {
+            var opinion = await _db.Opiniones.FirstOrDefaultAsync(o => o.Id == id);
+            if (opinion == null)
+                return NotFound(new { mensaje = "La opinión no existe." });
+
+            _db.Opiniones.Remove(opinion);
+            await _dual.SaveChangesAsync();
+            return Ok(new { mensaje = "Opinión eliminada." });
+        }
     }
 }

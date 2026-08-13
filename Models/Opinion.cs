@@ -24,5 +24,14 @@ namespace PetFeeder.API.Models
 
         [Column("fecha")]
         public string Fecha { get; set; } = string.Empty;
+
+        [Column("estado")]
+        public string Estado { get; set; } = "Nuevo";
+
+        [Column("respuesta_admin")]
+        public string? RespuestaAdmin { get; set; }
+
+        [Column("fecha_respuesta")]
+        public string? FechaRespuesta { get; set; }
     }
 }
