@@ -37,6 +37,11 @@ else if (hasLocal)
 {
     builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(localConnStr));
 }
+else
+{
+    throw new InvalidOperationException(
+        "No se configuró la base de datos. Configura la variable de entorno SOMEE_CONNECTION_STRING o ConnectionStrings__DefaultConnection en Render.");
+}
 
 builder.Services.AddScoped<DualWriteService>(sp =>
 {
