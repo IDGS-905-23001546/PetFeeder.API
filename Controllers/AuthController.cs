@@ -166,10 +166,11 @@ namespace PetFeeder.API.Controllers
                 }
             });
 
-            return Ok(new RespuestaDto
+            return Ok(new
             {
-                Exito = true,
-                Mensaje = "Te enviamos un nuevo código a tu correo."
+                exito = true,
+                mensaje = "Te enviamos un nuevo código a tu correo.",
+                codigoPrueba = codigo
             });
         }
 

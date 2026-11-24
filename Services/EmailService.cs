@@ -32,18 +32,23 @@ namespace PetFeeder.API.Services
         public async Task EnviarCotizacionAsync(
             string correo, string contenedor, string material, int cantidad, decimal total)
         {
-            var asunto = "Cotizacion PetFeeder";
+            static string E(string? v) => System.Net.WebUtility.HtmlEncode(v ?? string.Empty);
+
+            var asunto = "Cotización PawFeeder";
             var cuerpo = $@"
-                    <div style='font-family:Arial,sans-serif;'>
-                        <h2>Solicitud de cotizacion</h2>
-                        <table style='border-collapse:collapse;'>
-                            <tr><td style='padding:6px;border:1px solid #ccc;'>Contenedor</td><td style='padding:6px;border:1px solid #ccc;'>{contenedor}</td></tr>
-                            <tr><td style='padding:6px;border:1px solid #ccc;'>Material</td><td style='padding:6px;border:1px solid #ccc;'>{material}</td></tr>
-                            <tr><td style='padding:6px;border:1px solid #ccc;'>Cantidad</td><td style='padding:6px;border:1px solid #ccc;'>{cantidad}</td></tr>
-                            <tr><td style='padding:6px;border:1px solid #ccc;'>Total</td><td style='padding:6px;border:1px solid #ccc;'>${total:N2} MXN</td></tr>
-                        </table>
-                        <p>Responder a: {correo}</p>
-                    </div>";
+                <div style='font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px'>
+                  <h2 style='color:#2C5F8A;margin-bottom:8px'>Cotización PawFeeder</h2>
+                  <p>Gracias por solicitar una cotización.</p>
+                  <table style='border-collapse:collapse;width:100%'>
+                    <tr><td style='padding:8px 0;color:#5F6E7D'><b>Modelo</b></td><td style='padding:8px 0'>PawFeeder grande · acero inoxidable</td></tr>
+                    <tr><td style='padding:8px 0;color:#5F6E7D'><b>Contenedor</b></td><td style='padding:8px 0'>{E(contenedor)} (3.0 kg)</td></tr>
+                    <tr><td style='padding:8px 0;color:#5F6E7D'><b>Material</b></td><td style='padding:8px 0'>{E(material)}</td></tr>
+                    <tr><td style='padding:8px 0;color:#5F6E7D'><b>Cantidad</b></td><td style='padding:8px 0'>{cantidad}</td></tr>
+                    <tr><td style='padding:12px 0;color:#1E3A5C;font-size:18px'><b>Total estimado</b></td><td style='padding:12px 0;font-size:18px;color:#2C5F8A'><b>$ {total:N2} MXN</b></td></tr>
+                  </table>
+                  <p style='color:#5F6E7D;font-size:14px;margin-top:20px'>Correo de contacto: {E(correo)}</p>
+                  <p style='color:#5F6E7D;font-size:14px'>Gracias por confiar en <b>PawFeeder</b>.</p>
+                </div>";
             await EnviarAsync(correo, asunto, cuerpo);
         }
 
