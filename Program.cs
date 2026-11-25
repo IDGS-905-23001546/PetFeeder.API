@@ -55,6 +55,7 @@ builder.Services.AddScoped<DualWriteService>(sp =>
 builder.Services.AddScoped<PasswordService>();
 builder.Services.AddScoped<EmailService>();
 builder.Services.AddHttpClient("resend");
+builder.Services.AddHttpClient("brevo");
 
 var app = builder.Build();
 

@@ -58,10 +58,14 @@ namespace PetFeeder.API.Services
         private async Task EnviarAsync(string destinatario, string asunto, string cuerpoHtml)
         {
             var resendApiKey = _config["Resend:ApiKey"];
+            var brevoApiKey = _config["Brevo:ApiKey"];
             var smtpHost = _config["EmailSettings:SmtpHost"];
 
             var resendConfigurado = !string.IsNullOrWhiteSpace(resendApiKey);
+            var brevoConfigurado = !string.IsNullOrWhiteSpace(brevoApiKey);
             var smtpConfigurado = !string.IsNullOrWhiteSpace(smtpHost);
+
+            Exception? ultimoError = null;
 
             if (resendConfigurado)
             {
@@ -70,9 +74,22 @@ namespace PetFeeder.API.Services
                     await EnviarConResendAsync(destinatario, asunto, cuerpoHtml, resendApiKey!);
                     return;
                 }
-                catch when (smtpConfigurado)
+                catch (Exception ex) when (brevoConfigurado || smtpConfigurado)
                 {
-                    // Si Resend falla (ej. modo prueba) y hay SMTP configurado, usar SMTP.
+                    ultimoError = ex;
+                }
+            }
+
+            if (brevoConfigurado)
+            {
+                try
+                {
+                    await EnviarConBrevoAsync(destinatario, asunto, cuerpoHtml, brevoApiKey!);
+                    return;
+                }
+                catch (Exception ex) when (smtpConfigurado)
+                {
+                    ultimoError = ex;
                 }
             }
 
@@ -82,15 +99,23 @@ namespace PetFeeder.API.Services
                 return;
             }
 
+            if (ultimoError != null)
+                throw ultimoError;
+
             if (resendConfigurado)
             {
-                // Reintentar Resend para obtener el error real si no hubo SMTP.
                 await EnviarConResendAsync(destinatario, asunto, cuerpoHtml, resendApiKey!);
                 return;
             }
 
+            if (brevoConfigurado)
+            {
+                await EnviarConBrevoAsync(destinatario, asunto, cuerpoHtml, brevoApiKey!);
+                return;
+            }
+
             throw new InvalidOperationException(
-                "No hay servicio de correo configurado. Configura Resend (Resend__ApiKey) o SMTP (EmailSettings__SmtpHost).");
+                "No hay servicio de correo configurado. Configura Brevo (Brevo__ApiKey), Resend (Resend__ApiKey) o SMTP (EmailSettings__SmtpHost).");
         }
 
         private async Task EnviarConResendAsync(string destinatario, string asunto, string cuerpoHtml, string apiKey)
@@ -122,6 +147,39 @@ namespace PetFeeder.API.Services
 
             if (!resp.IsSuccessStatusCode)
                 throw new Exception($"Resend respondio {(int)resp.StatusCode}: {body}");
+        }
+
+        private async Task EnviarConBrevoAsync(string destinatario, string asunto, string cuerpoHtml, string apiKey)
+        {
+            var fromEmail = (_config["Brevo:FromEmail"] ?? _config["EmailSettings:FromEmail"] ?? _config["Resend:FromEmail"] ?? "").Trim();
+            var fromName = (_config["Brevo:FromName"] ?? _config["EmailSettings:FromName"] ?? _config["Resend:FromName"] ?? "PetFeeder").Trim();
+
+            if (string.IsNullOrWhiteSpace(fromEmail))
+                throw new InvalidOperationException("Brevo no configurado: falta Brevo:FromEmail.");
+
+            using var http = _httpClientFactory.CreateClient("brevo");
+            http.DefaultRequestHeaders.Remove("api-key");
+            http.DefaultRequestHeaders.Add("api-key", apiKey.Trim());
+            http.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            var payload = new
+            {
+                sender = new { name = fromName, email = fromEmail },
+                to = new[] { new { email = destinatario } },
+                subject = asunto,
+                htmlContent = cuerpoHtml
+            };
+
+            var contenido = new StringContent(
+                JsonSerializer.Serialize(payload),
+                Encoding.UTF8,
+                "application/json");
+
+            var resp = await http.PostAsync("https://api.brevo.com/v3/smtp/email", contenido);
+            var body = await resp.Content.ReadAsStringAsync();
+
+            if (!resp.IsSuccessStatusCode)
+                throw new Exception($"Brevo respondio {(int)resp.StatusCode}: {body}");
         }
 
         private async Task EnviarConSmtpAsync(string destinatario, string asunto, string cuerpoHtml)
