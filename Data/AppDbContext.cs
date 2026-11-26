@@ -28,5 +28,6 @@ namespace PetFeeder.API.Data
         public DbSet<RecetaProducto> RecetasProducto { get; set; }
         public DbSet<DispensadorInventario> DispensadoresInventario { get; set; }
         public DbSet<Proveedor> Proveedores { get; set; }
+        public DbSet<PedidoProveedor> PedidosProveedor { get; set; }
     }
 }
