@@ -76,6 +76,7 @@ namespace PetFeeder.API.Services
                 }
                 catch (Exception ex) when (brevoConfigurado || smtpConfigurado)
                 {
+                    Console.WriteLine($"[WARNING] Resend fallo, probando otro proveedor: {ex.Message}");
                     ultimoError = ex;
                 }
             }
@@ -89,6 +90,7 @@ namespace PetFeeder.API.Services
                 }
                 catch (Exception ex) when (smtpConfigurado)
                 {
+                    Console.WriteLine($"[WARNING] Brevo fallo, probando SMTP: {ex.Message}");
                     ultimoError = ex;
                 }
             }
