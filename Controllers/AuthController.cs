@@ -309,7 +309,9 @@ namespace PetFeeder.API.Controllers
                 Id = usuario.Id,
                 Nombre = usuario.Nombre,
                 Email = usuario.Email,
-                Verificado = usuario.Verificado
+                Verificado = usuario.Verificado,
+                Rol = usuario.Rol,
+                FotoUrl = usuario.FotoUrl
             });
         }
 

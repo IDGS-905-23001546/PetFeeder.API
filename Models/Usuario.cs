@@ -31,6 +31,9 @@ namespace PetFeeder.API.Models
         [Column("activo")]
         public bool Activo { get; set; } = true;
 
+        [Column("foto_url")]
+        public string? FotoUrl { get; set; }
+
         [Column("created_at")]
         public DateTime CreatedAt { get; set; }
 

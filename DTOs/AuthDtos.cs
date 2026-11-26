@@ -47,6 +47,7 @@
         public string Email { get; set; } = string.Empty;
         public bool Verificado { get; set; }
         public string Rol { get; set; } = "cliente";
+        public string? FotoUrl { get; set; }
     }
 
     public class CambiarPasswordDto

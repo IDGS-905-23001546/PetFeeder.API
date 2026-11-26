@@ -65,7 +65,8 @@ namespace PetFeeder.API.Controllers
                 Nombre = usuario.Nombre,
                 Email = usuario.Email,
                 Verificado = usuario.Verificado,
-                Rol = usuario.Rol
+                Rol = usuario.Rol,
+                FotoUrl = usuario.FotoUrl
             });
         }
 
@@ -105,7 +106,8 @@ namespace PetFeeder.API.Controllers
                 usuario.Telefono,
                 usuario.Activo,
                 usuario.Rol,
-                usuario.Verificado
+                usuario.Verificado,
+                usuario.FotoUrl
             });
         }
 
@@ -121,6 +123,8 @@ namespace PetFeeder.API.Controllers
                 usuario.Nombre = request.Nombre.Trim();
 
             usuario.Telefono = string.IsNullOrWhiteSpace(request.Telefono) ? null : request.Telefono.Trim();
+            if (request.FotoUrl != null)
+                usuario.FotoUrl = string.IsNullOrWhiteSpace(request.FotoUrl) ? null : request.FotoUrl;
             usuario.UpdatedAt = DateTime.UtcNow;
             await _dual.SaveChangesAsync();
 
@@ -130,7 +134,8 @@ namespace PetFeeder.API.Controllers
                 Nombre = usuario.Nombre,
                 Email = usuario.Email,
                 Verificado = usuario.Verificado,
-                Rol = usuario.Rol
+                Rol = usuario.Rol,
+                FotoUrl = usuario.FotoUrl
             });
         }
 
@@ -213,5 +218,6 @@ namespace PetFeeder.API.Controllers
     {
         public string? Nombre { get; set; }
         public string? Telefono { get; set; }
+        public string? FotoUrl { get; set; }
     }
 }
